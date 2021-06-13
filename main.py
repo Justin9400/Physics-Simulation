@@ -2,6 +2,7 @@ import sys
 import pygame
 import pymunk
 import time
+import sim1, sim2, sim3, sim4
 import constants
 import pygame.freetype
 from pygame.sprite import Sprite
@@ -9,7 +10,9 @@ from pygame.rect import Rect
 from enum import Enum
 from pygame.sprite import RenderUpdates
 
-screen = pygame.display.set_mode((constants.resolution), pygame.RESIZABLE)
+pygame.init()
+infoObject = pygame.display.Info()
+screen = pygame.display.set_mode((infoObject.current_w, infoObject.current_h), pygame.RESIZABLE)
 
 class UIElement(Sprite):
     def __init__(self, center_position, text, font_size, bg_rgb, text_rgb, action=None):
@@ -70,7 +73,6 @@ class GameState(Enum):
     SIMULATION_4 = 5
 
 def main():
-    pygame.init()
     pygame.display.set_caption("Physics Simulation - Justin Kachornvanich") # Title of the window
     clock = pygame.time.Clock()
     space = pymunk.Space()
@@ -83,16 +85,17 @@ def main():
             game_state = title_screen(screen)
 
         if game_state == GameState.SIMULATION_1:
-            game_state = Simulation_1(screen)
+            game_state = sim1.Simulation_1(screen)
             clear_title(game_state, constants.darkGrey)
+
         if game_state == GameState.SIMULATION_2:
-            game_state = Simulation_2(screen)
+            game_state = sim2.Simulation_2(screen)
 
         if game_state == GameState.SIMULATION_3:
-            game_state = Simulation_3(screen)
+            game_state = sim3.Simulation_3(screen)
 
         if game_state == GameState.SIMULATION_4:
-            game_state = Simulation_4(screen)
+            game_state = sim4.Simulation_4(screen)
 
         if game_state == GameState.QUIT:
             pygame.quit()
@@ -103,7 +106,7 @@ def create_surface_with_text(text, font_size, text_rgb, bg_rgb):
     return surface.convert_alpha()
 def title_screen(screen):
     sim1_btn = UIElement(
-        center_position = (600, 400),
+        center_position = (infoObject.current_w/3.9, infoObject.current_h/2.5),
         font_size = 50,
         bg_rgb = constants.darkGrey,
         text_rgb = constants.white,
@@ -111,7 +114,7 @@ def title_screen(screen):
         action = GameState.SIMULATION_1
     )
     sim2_btn = UIElement(
-        center_position = (1315, 400),
+        center_position = (infoObject.current_w/1.35, infoObject.current_h/2.5),
         font_size = 50,
         bg_rgb = constants.darkGrey,
         text_rgb = constants.white,
@@ -119,7 +122,7 @@ def title_screen(screen):
         action = GameState.SIMULATION_2
     )
     sim3_btn = UIElement(
-        center_position = (600, 700),
+        center_position = (infoObject.current_w/3.9, infoObject.current_h/1.5),
         font_size = 50,
         bg_rgb = constants.darkGrey,
         text_rgb = constants.white,
@@ -127,7 +130,7 @@ def title_screen(screen):
         action = GameState.SIMULATION_3
     )
     sim4_btn = UIElement(
-        center_position = (1315, 700),
+        center_position = (infoObject.current_w/1.35, infoObject.current_h/1.5),
         font_size = 50,
         bg_rgb = constants.darkGrey,
         text_rgb = constants.white,
@@ -135,7 +138,7 @@ def title_screen(screen):
         action = GameState.SIMULATION_4
     )
     quit_btn = UIElement(
-        center_position = (constants.resolutionX/2, constants.resolutionY/1.1),
+        center_position = (infoObject.current_w/2, infoObject.current_h/1.1),
         font_size = 50,
         bg_rgb = constants.darkGrey,
         text_rgb = constants.white,
@@ -144,14 +147,15 @@ def title_screen(screen):
     )
     buttons = RenderUpdates(quit_btn, sim1_btn, sim2_btn, sim3_btn, sim4_btn)
     return game_loop(screen, buttons)
+'''
 def Simulation_1(screen):
     clear_screen(constants.darkGrey)
     return_btn = UIElement(
-        center_position = (75, 25),
+        center_position = (constants.menu_button_location),
         font_size = 50,
         bg_rgb = constants.darkGrey,
         text_rgb = constants.white,
-        text = "Menu1",
+        text = "Menu",
         action = GameState.TITLE,
         )
     buttons = RenderUpdates(return_btn)
@@ -159,7 +163,7 @@ def Simulation_1(screen):
 def Simulation_2(screen):
     clear_screen(constants.darkGrey)
     return_btn = UIElement(
-        center_position = (75, 25),
+        center_position = (constants.menu_button_location),
         font_size = 50,
         bg_rgb = constants.darkGrey,
         text_rgb = constants.white,
@@ -171,7 +175,7 @@ def Simulation_2(screen):
 def Simulation_3(screen):
     clear_screen(constants.darkGrey)
     return_btn = UIElement(
-        center_position = (75, 25),
+        center_position = (constants.menu_button_location),
         font_size = 50,
         bg_rgb = constants.darkGrey,
         text_rgb = constants.white,
@@ -183,7 +187,7 @@ def Simulation_3(screen):
 def Simulation_4(screen):
     clear_screen(constants.darkGrey)
     return_btn = UIElement(
-        center_position = (75, 25),
+        center_position = (constants.menu_button_location),
         font_size = 50,
         bg_rgb = constants.darkGrey,
         text_rgb = constants.white,
@@ -192,6 +196,7 @@ def Simulation_4(screen):
         )
     buttons = RenderUpdates(return_btn)
     return game_loop(screen, buttons)
+    '''
 def game_loop(screen, buttons):
     while True:
         mouse_up = False
