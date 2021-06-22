@@ -2,13 +2,14 @@ import sys
 import pygame
 import pymunk
 import time
-import sim1, sim2, sim3, sim4
 import constants
 import pygame.freetype
 from pygame.sprite import Sprite
-from pygame.rect import Rect
 from enum import Enum
 from pygame.sprite import RenderUpdates
+import random
+from typing import List
+import pymunk.pygame_util
 
 pygame.init()
 infoObject = pygame.display.Info()
@@ -59,10 +60,6 @@ class UIElement(Sprite):
     def draw(self, surface):
         """ Draws element onto a surface """
         surface.blit(self.image, self.rect)
-class Player:
-    def __init__(self, score=0, current_level=1):
-        self.score = score
-        self.current_level = current_level
 class GameState(Enum):
     QUIT = -1
     TITLE = 0
@@ -74,10 +71,6 @@ class GameState(Enum):
 
 def main():
     pygame.display.set_caption("Physics Simulation - Justin Kachornvanich") # Title of the window
-    clock = pygame.time.Clock()
-    space = pymunk.Space()
-    space.gravity = (0.0, 900.0)
-    space.step(1/50.0)
     game_state = GameState.TITLE
 
     while True:
@@ -85,17 +78,16 @@ def main():
             game_state = title_screen(screen)
 
         if game_state == GameState.SIMULATION_1:
-            game_state = sim1.Simulation_1(screen)
-            clear_title(game_state, constants.darkGrey)
+            game_state = Simulation_1(screen)
 
         if game_state == GameState.SIMULATION_2:
-            game_state = sim2.Simulation_2(screen)
+            game_state = Simulation_2(screen)
 
         if game_state == GameState.SIMULATION_3:
-            game_state = sim3.Simulation_3(screen)
+            game_state = Simulation_3(screen)
 
         if game_state == GameState.SIMULATION_4:
-            game_state = sim4.Simulation_4(screen)
+            game_state = Simulation_4(screen)
 
         if game_state == GameState.QUIT:
             pygame.quit()
@@ -147,9 +139,8 @@ def title_screen(screen):
     )
     buttons = RenderUpdates(quit_btn, sim1_btn, sim2_btn, sim3_btn, sim4_btn)
     return game_loop(screen, buttons)
-'''
 def Simulation_1(screen):
-    clear_screen(constants.darkGrey)
+    space = pymunk.Space()
     return_btn = UIElement(
         center_position = (constants.menu_button_location),
         font_size = 50,
@@ -196,7 +187,6 @@ def Simulation_4(screen):
         )
     buttons = RenderUpdates(return_btn)
     return game_loop(screen, buttons)
-    '''
 def game_loop(screen, buttons):
     while True:
         mouse_up = False
@@ -206,7 +196,7 @@ def game_loop(screen, buttons):
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 mouse_up = True
         screen.fill(constants.darkGrey)
-        Title = Title_Screen_Header()
+        Title_Screen_Header()
         for button in buttons:
             ui_action = button.update(pygame.mouse.get_pos(), mouse_up)
             if ui_action is not None:
@@ -240,5 +230,130 @@ def clear_title(game_state, color):
         screen.fill(color)
         pygame.display.flip()
 
+class BouncyBalls(object):
+
+    def __init__(self) -> None:
+        # Space
+        self._space = pymunk.Space()
+        self._space.gravity = (0.0, 900.0)
+
+        # Physics
+        # Time step
+        self._dt = 1.0 / 60.0
+        # Number of physics steps per screen frame
+        self._physics_steps_per_frame = 1
+
+        # pygame
+        pygame.init()
+        self._screen = pygame.display.set_mode((600, 600))
+        self._clock = pygame.time.Clock()
+
+        self._draw_options = pymunk.pygame_util.DrawOptions(self._screen)
+
+        # Static barrier walls (lines) that the balls bounce off of
+        self._add_static_scenery()
+
+        # Balls that exist in the world
+        self._balls: List[pymunk.Circle] = []
+
+        # Execution control and time until the next ball spawns
+        self._running = True
+        self._ticks_to_next_ball = 10
+
+    def run(self) -> None:
+        """
+        The main loop of the game.
+        :return: None
+        """
+        # Main loop
+        while self._running:
+            # Progress time forward
+            for x in range(self._physics_steps_per_frame):
+                self._space.step(self._dt)
+
+            self._process_events()
+            self._update_balls()
+            self._clear_screen()
+            self._draw_objects()
+            pygame.display.flip()
+            # Delay fixed time between frames
+            self._clock.tick(50)
+            pygame.display.set_caption("fps: " + str(self._clock.get_fps()))
+
+    def _add_static_scenery(self) -> None:
+        """
+        Create the static bodies.
+        :return: None
+        """
+        static_body = self._space.static_body
+        static_lines = [
+            pymunk.Segment(static_body, (111.0, 600 - 280), (407.0, 600 - 246), 0.0),
+            pymunk.Segment(static_body, (407.0, 600 - 246), (407.0, 600 - 343), 0.0),
+        ]
+        for line in static_lines:
+            line.elasticity = 0.95
+            line.friction = 0.9
+        self._space.add(*static_lines)
+
+    def _process_events(self) -> None:
+        """
+        Handle game and events like keyboard input. Call once per frame only.
+        :return: None
+        """
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self._running = False
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self._running = False
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+                pygame.image.save(self._screen, "bouncing_balls.png")
+
+    def _update_balls(self) -> None:
+        """
+        Create/remove balls as necessary. Call once per frame only.
+        :return: None
+        """
+        self._ticks_to_next_ball -= 1
+        if self._ticks_to_next_ball <= 0:
+            self._create_ball()
+            self._ticks_to_next_ball = 100
+        # Remove balls that fall below 100 vertically
+        balls_to_remove = [ball for ball in self._balls if ball.body.position.y > 500]
+        for ball in balls_to_remove:
+            self._space.remove(ball, ball.body)
+            self._balls.remove(ball)
+
+    def _create_ball(self) -> None:
+        """
+        Create a ball.
+        :return:
+        """
+        mass = 10
+        radius = 25
+        inertia = pymunk.moment_for_circle(mass, 0, radius, (0, 0))
+        body = pymunk.Body(mass, inertia)
+        x = random.randint(115, 350)
+        body.position = x, 200
+        shape = pymunk.Circle(body, radius, (0, 0))
+        shape.elasticity = 0.95
+        shape.friction = 0.9
+        self._space.add(body, shape)
+        self._balls.append(shape)
+
+    def _clear_screen(self) -> None:
+        """
+        Clears the screen.
+        :return: None
+        """
+        self._screen.fill(pygame.Color("white"))
+
+    def _draw_objects(self) -> None:
+        """
+        Draw the objects.
+        :return: None
+        """
+        self._space.debug_draw(self._draw_options)
 if __name__ == "__main__":
     main()
+
+
